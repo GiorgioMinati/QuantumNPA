@@ -55,7 +55,6 @@ end
 npa_moment(source, level) = npa_moment(npa_level(source, level))
 
 
-
 """
 Generate the NPA relaxation for a given quantum optimisation problem (an
 operator expr whose expectation we want to maximise with the expectation
@@ -68,7 +67,7 @@ function npa2sdp(expr, level; eq=[], ge=[])
     return npa2sdp(expr, moment, eq=eq, ge=ge)
 end
 
-function npa2sdp(expr, moment::Polynomial; eq=[], ge=[])
+function _reduce_problem(expr, moment::Polynomial; eq=[], ge=[])
     # Reduce constraints to canonical form
     expr = conj_min(expr)
     eq = linspace(map(conj_min, eq))
@@ -89,10 +88,13 @@ function npa2sdp(expr, moment::Polynomial; eq=[], ge=[])
     # with the original moment matrix.
     ge = reduce_exprs(ge, eq)
     
-    return (expr, vcat([moment], ge))
+    return expr, moment, ge, eq
 end
 
-
+function npa2sdp(expr, moment::Polynomial; eq=[], ge=[])
+    expr, moment, ge, _ = _reduce_problem(expr, moment, eq=eq, ge=ge) 
+    return (expr, vcat([moment], ge))
+end
 
 if !@isdefined(default_solver)
     default_solver = SCS.Optimizer
@@ -123,9 +125,10 @@ function sdp2jump(expr, ineqs;
     end
     
     model = !isnothing(solver) ? Model(solver) : Model()
-
-    Zs = [@variable(model, [1:m, 1:n], PSD)
-          for (m, n) in size_as_pair.(ineqs)]
+    
+    Zs = [@variable(model, [1:m, 1:n], PSD, base_name="Z$i")
+          for (i, (m, n)) in enumerate(size_as_pair.(ineqs))]
+    model[:Zs] = Zs
     
     Ids = (ineq[Id] for ineq in ineqs)
     objective = (sum(LinearAlgebra.tr(s*m*z)
@@ -145,8 +148,8 @@ function sdp2jump(expr, ineqs;
         Fs = (ineq[m] for ineq in ineqs)
         tr_term = sum(LinearAlgebra.tr(F*Z)
                       for (F, Z) in zip(Fs, Zs))
-            
-        @constraint(model, tr_term + s*c == 0)
+        
+        @constraint(model, tr_term + s*c == 0, base_name=string(m))
     end
 
     set_verbosity!(model, verbose)
@@ -168,7 +171,6 @@ function npa2jump(expr, level_or_moments;
                      goal=goal,
                      solver=solver,
                      verbose=verbose)
-
     return model
 end
 

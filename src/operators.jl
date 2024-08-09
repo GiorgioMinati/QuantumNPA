@@ -33,3 +33,9 @@ include("ops_polynomial.jl")
 # return all the individual monomials in a monomial or polynomial,
 # reduce a list of polynomial constraints to a canonical form.
 include("ops_utilities.jl")
+
+# Definitions for commuting operators
+include("ops_commutative.jl")
+
+# Functions impelmenting scalar extension
+include("ops_scalar.jl")

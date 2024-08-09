@@ -344,7 +344,11 @@ function join_words(x::OpVector, y::OpVector)
         (k, action) = insert_at(p, word, n)
 
         if action === :join
-            (c, w) = join_ops(u, word[k][2])
+            if is_commutative(pu) && is_commutative(word[k])
+                (c, w) = join_commutative(u, word[k][2])
+            else
+                (c, w) = join_ops(u, word[k][2])
+            end
 
             if iszero(c)
                 return (0, Id_word)
@@ -384,6 +388,9 @@ end
 # Implementation of conjugate/adjoint of a monomial.
 
 function word_conj(word::OpVector)
+    if is_commutative(word)
+        return word
+    end
     n = length(word)
     result = [(p, map(conj, Iterators.reverse(u)))
               for (p, u) in reverse(word)]

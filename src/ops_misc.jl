@@ -87,7 +87,7 @@ party_vec(c::Char) = [party_num(c)]
 party_vec(s::Symbol) = party(string(s))
 
 function party_vec(n::Int)
-    @assert n > 0
+    @assert n ≥ 0
     return Int[n]
 end
 

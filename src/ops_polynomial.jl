@@ -150,8 +150,16 @@ Base.hash(p::Polynomial, h::UInt) = hash(p.terms, h)
 
 
 
-Base.iszero(p::Polynomial) = isempty(p.terms)
-
+#Base.iszero(p::Polynomial) = isempty(p.terms)
+# TODO: Make user choose the tolerance 
+function Base.iszero(p::Polynomial)
+    for v in values(p.terms)
+        if !isapprox(v, 0, atol=1e-10)
+            return false
+        end
+    end
+    return true
+end
 
 
 # Make it possible to access/assign polynomial coefficients via [] accessor.
