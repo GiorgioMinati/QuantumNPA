@@ -47,10 +47,8 @@ function connection_structure(con_parties::Tuple{String, String}...)
 end
 
 # It is often easier to define the complementary version of this graph
-function separability_structure(sep_edges::Tuple{Int, Int}...)
+function separability_structure(all_parties::Vector{Int}, sep_edges::Tuple{Int, Int}...)
     con = ConnectionStructure()
-    all_parties = collect(1:maximum([(sep_edges...)...]))
-    unique!(all_parties)
     n = length(all_parties)
     for i=1:n, j=i+1:n
         p1, p2 = all_parties[i], all_parties[j]
@@ -62,6 +60,18 @@ function separability_structure(sep_edges::Tuple{Int, Int}...)
         end
     end
     return con
+end
+
+function separability_structure(sep_edges::Tuple{Int, Int}...)
+    all_parties = collect(1:maximum([(sep_edges...)...]))
+    unique!(all_parties)
+    return separability_structure(all_parties, sep_edges...)
+end
+
+function separability_structure(all_parties::Vector{String}, sep_parties::Tuple{String, String}...)
+    all_nums = map(party_num, all_parties)
+    sep_nums = map(x::Tuple{String, String}->map(party_num, x), sep_parties)
+    return separability_structure(all_nums, sep_nums...)
 end
 
 function separability_structure(sep_parties::Tuple{String, String}...)
@@ -125,7 +135,9 @@ function split_reduce_expr(poly::Polynomial, con, space::Linspace)
     new_poly = Polynomial(poly.cfsize, poly.blockstruct)
     for (mon, coeff) in collect(poly.terms)
         new_mon = split_reduce_expr(mon, con, space)
-        new_poly += new_mon*coeff
+        if !iszero(new_mon) && !iszero(coeff)
+            add!(new_poly, coeff*new_mon)
+        end
     end
     return new_poly
 end
@@ -254,7 +266,7 @@ function subs_scalar_factors(poly::Polynomial, se::ScalarExtension; eq::Linspace
     new_poly = Polynomial(poly.cfsize, poly.blockstruct)
     for (mon, coeff) in collect(poly.terms)
         new_mon = subs_scalar_factors(mon, se, eq=eq)
-        new_poly += new_mon*coeff
+        add!(new_poly, coeff*new_mon)
     end
     return new_poly
 end

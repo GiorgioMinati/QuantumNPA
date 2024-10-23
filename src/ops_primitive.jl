@@ -34,7 +34,16 @@ function join_ops(opsx::Vector{Operator}, opsy::Vector{Operator})
         k += 1
 
         if (op != []) || (j == 0) || (k == K)
-            ops = Vector{Operator}(vcat(opsx[1:j], op, opsy[k:end]))
+            n = length(op) 
+            ops = Vector{Operator}(undef, j+n+K-k)
+            if j != 0
+                ops[1:j] = opsx[1:j]
+            end
+            ops[j+1:n+j] = op
+            if k != K
+                ops[n+j+1:end] = opsy[k:end]
+            end
+            #ops = Vector{Operator}(vcat(opsx[1:j], op, opsy[k:end]))
             return (c, ops)
         end
     end

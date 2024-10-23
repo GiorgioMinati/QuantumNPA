@@ -110,7 +110,20 @@ function set_verbosity!(model, verbose)
     end
 end
 
+function sparse_trprod(A::SparseMatrixCSC{Float64, Int64}, B::Symmetric{VariableRef, Matrix{VariableRef}}
+)
+    n = size(A)[1]
+    if size(B)[2] != n
+        @error "Matrix sizes do not match: A:$n, B:$(size(B)[2])"
+    end
+    Is, Js, Vs = findnz(A)
 
+    exp = AffExpr(0)
+    for k=1:length(Is)
+        add_to_expression!(exp, Vs[k] * B[Js[k],Is[k]])
+    end
+    return exp
+end
 
 function sdp2jump(expr, ineqs;
                   goal=:maximise,
@@ -126,7 +139,7 @@ function sdp2jump(expr, ineqs;
     
     model = !isnothing(solver) ? Model(solver) : Model()
     
-    Zs = [@variable(model, [1:m, 1:n], PSD, base_name="Z$i")
+    Zs = [@variable(model, [1:m, 1:n], PSD, set_string_name = false)
           for (i, (m, n)) in enumerate(size_as_pair.(ineqs))]
     model[:Zs] = Zs
     
@@ -146,18 +159,22 @@ function sdp2jump(expr, ineqs;
     for m in mons
         c = expr[m]
         Fs = (ineq[m] for ineq in ineqs)
-        tr_term = sum(LinearAlgebra.tr(F*Z)
-                      for (F, Z) in zip(Fs, Zs))
+        tr_term = @expression(model, sum(sparse_trprod(F, Z)
+                                         for (F, Z) in zip(Fs, Zs)))
         
-        @constraint(model, tr_term + s*c == 0, base_name=string(m))
+        @constraint(model, tr_term + s*c == 0, set_string_name = false)
     end
+
+    #@expression(model, moncons[i=1:length(mons)], 
+    #    sum(LinearAlgebra.tr(F*Z)
+    #        for (F, Z) in zip((ineq[mons[i]] for ineq in ineqs), Zs)) 
+    #    + expr[mons[i]]*s)
+    #@constraint(model, moncons .== 0, set_string_name = false)
 
     set_verbosity!(model, verbose)
 
     return model
 end
-
-
 
 function npa2jump(expr, level_or_moments;
                   eq=[],
