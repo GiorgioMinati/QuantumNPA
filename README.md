@@ -1,6 +1,6 @@
 # QuantumNPA
 
-Code to do NPA in Julia. In development - names of important functions or
+Code to do NPA in Julia. Based on [https://github.com/ewoodhead/QuantumNPA.jl.git](https://github.com/ewoodhead/QuantumNPA.jl.git), extended with additional tools to implement the [scalar extension]([url](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.123.140503)) technique. In development - names of important functions or
 even the entire project could change.
 
 Prerequisites:
